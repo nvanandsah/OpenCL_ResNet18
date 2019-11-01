@@ -1,4 +1,4 @@
-__kernel void BN(__global float* input,__global float* output,__global int* rows,__global int* cols, float gamma, float beta , float mean, float var,int Batch Size )
+__kernel void BN(__global float* input,__global float* output,__global int* rows,__global int* cols, float gamma, float beta , float mean, float var )
 {
 
 int column = get_global_id(0);

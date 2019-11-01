@@ -5,6 +5,6 @@ int column = get_global_id(0);
 	int row = get_global_id(1);
 int nor;
 nor = (*(input+row**cols+col) - mean) / sqrt(var);
-output= gamma*nor+beta;
+*(output+row**cols+col)= gamma*nor+beta;
 
 }

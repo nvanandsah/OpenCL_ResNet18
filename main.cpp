@@ -169,77 +169,51 @@ class Conv2D
 };
 int main() 
 {
-   float *hInputImage;
-   float *hOutputImage;
-
-   int imageRows = 32;
-   int imageCols = 32;
-
-	char* inputImagePath = "snail.txt";
-
-   '''static float gaussianBlurFilterFactor = 273.0f;
-   static float gaussianBlurFilter[25] = {
-    1.0f,  4.0f,  7.0f,  4.0f, 1.0f,
-    4.0f, 16.0f, 26.0f, 16.0f, 4.0f,
-    7.0f, 26.0f, 41.0f, 26.0f, 7.0f,
-    4.0f, 16.0f, 26.0f, 16.0f, 4.0f,
-    1.0f,  4.0f,  7.0f,  4.0f, 1.0f};
-   static const int gaussianBlurFilterWidth = 5;
-
-   int filterWidth = gaussianBlurFilterWidth;
-   float filterFactor = gaussianBlurFilterFactor;
-   float *filter = gaussianBlurFilter;   
-   for (int i = 0; i < filterWidth*filterWidth; i++) {
-      filter[i] = filter[i]/filterFactor;
-   }'''
-
-   /* Read in the BMP image */
-   hInputImage = readImgtxt(inputImagePath);
-
-   /* Allocate space for the output image */
-   hOutputImage = new float [imageRows*imageCols*];
-
-    /* Query for platforms */
-    std::vector<cl::Platform> platforms;
+   	std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
 
-    /* Get a list of devices on this platform */
     std::vector<cl::Device> devices;
     platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
 
-    /* Create a context for the devices */
     cl::Context context(devices);
 
-    /* Create a command queue for the first device */
     cl::CommandQueue queue = cl::CommandQueue(context, devices[0]);
 
-    /* Create the images */
-    cl::ImageFormat imageFormat = cl::ImageFormat(CL_RGB, CL_FLOAT);
-    cl::Image2D inputImage = cl::Image2D(context, CL_MEM_READ_ONLY, imageFormat, imageCols, imageRows);
-    cl::Image2D outputImage = cl::Image2D(context, CL_MEM_WRITE_ONLY, imageFormat, imageCols, imageRows);
+    //cl::Image2D outputImage = cl::Image2D(context, CL_MEM_WRITE_ONLY, imageFormat, imageCols, imageRows);
 
-    /* Create a buffer for the filter */
-    cl::Buffer filterBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, filterWidth*filterWidth*sizeof(float));
+	float *hInputImage;
+	float *hOutputImage;
 
+	int imageRows = 32;
+	int imageCols = 32;
+
+	hOutputImage = new float [imageRows*imageCols*];
+
+	char* inputImagePath = "snail.txt";
+	hInputImage = readImgtxt(inputImagePath);
 
 	string weightFilePath("conv2d_1.txt");
 	Conv2D layer1(weightFilePath);
 	layer1.layerSummary();
 
-	
 	for(int i=0; i<layer1.kernelWidth; i++){
 		for(int j=0; j<layer1.kernelHeight; j++){
 			for(int k=0; k<layer1.kernelDepth; k++)
 				cout<<layer1.weights[0][i][j][k]<<" ";
 		}
 	}
+
     /// Layer 1
 		int in_channels, out_channels, kernel_size, imgRows, imgCols;
-		in_channels = ;
-		out_channels = 1;
+		in_channels = layer1.kernelDepth;
+		out_channels = layer1.numChannels;
 		kernel_size = 3;
 		imgRows = imageRows;
 		imgCols = imageCols;	
+		
+		cl::ImageFormat imageFormat = cl::ImageFormat(CL_RGB, CL_FLOAT);
+		cl::Image2D inputImage = cl::Image2D(context, CL_MEM_READ_ONLY, imageFormat, imageCols, imageRows);
+		
 		cl::Buffer inputBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, in_channels*imgRows*imgCols*sizeof(float));
 		cl::Buffer filterBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, in_channels*out_channels*kernel_size*kernel_size*sizeof(float));
 		cl::Buffer biasBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, out_channels*sizeof(float));

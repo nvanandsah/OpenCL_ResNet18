@@ -233,7 +233,7 @@ int main()
 		cl::Buffer imgRowsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
 		cl::Buffer imgColsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
 
-		queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, in_channels*imgRows*imgCols*sizeof(float), input_buffer);
+		queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, in_channels*imgRows*imgCols*sizeof(float), hInputImage);
 		queue.enqueueWriteBuffer(filterBuffer, CL_TRUE, 0, in_channels*out_channels*kernel_size*kernel_size*sizeof(float), w[weight_count]);
 		queue.enqueueWriteBuffer(biasBuffer, CL_TRUE, 0, out_channels*sizeof(float), w[weight_count+1]);
 		queue.enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), output_buffer);
@@ -243,7 +243,7 @@ int main()
 		queue.enqueueWriteBuffer(imgRowsBuffer, CL_TRUE, 0, sizeof(int), &imgRows);
 		queue.enqueueWriteBuffer(imgColsBuffer, CL_TRUE, 0, sizeof(int), &imgCols);
 
-		std::ifstream sourceFile("cl_kernels/conv.cl");
+		std::ifstream sourceFile("Kernels/conv.cl");
         std::string sourceCode(
          std::istreambuf_iterator<char>(sourceFile),
          (std::istreambuf_iterator<char>()));
@@ -273,7 +273,7 @@ int main()
      	queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local,NULL,&event);
       queue.finish();
      	// Read data back
-     	queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), output_buffer);
+     	queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), hOutputImage);
      cl_ulong time_start;
      cl_ulong time_end;
      

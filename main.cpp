@@ -187,11 +187,10 @@ int main()
 	int imageRows = 32;
 	int imageCols = 32;
 
-	
-
 	char* inputImagePath = "snail.txt";
 	hInputImage = readImgtxt(inputImagePath);
-
+	
+    /// ------------------------------------ Layer 1
 	string weightFilePath("conv2d_1.txt");
 	Conv2D layer1(weightFilePath);
 	layer1.layerSummary();
@@ -203,7 +202,6 @@ int main()
 		}
 	}
 
-    /// Layer 1
 		int in_channels, out_channels, kernel_size, imgRows, imgCols;
 		in_channels = layer1.kernelDepth;
 		out_channels = layer1.numChannels;
@@ -282,12 +280,88 @@ int main()
 	catch(...){
 		cout<<"Error";
 	}
+	// --------------------------------------------------- Layer 1 End
 
-    /*for (int p = 0;p<(out_channels*imgRows*imgCols);p++)
-          { 
-              input_buffer[p] = output_buffer[p]; 
-      }
-    }*/
+    /*for (int p = 0;p<(out_channels*imgRows*imgCols);p++){ 
+            input_buffer[p] = output_buffer[p]; 
+    	}
+    
+	
+	/* ------------------------------------ MaxPool 2D Starts ------------------------------------ */
+
+	int channels, pool_size, outImgRows, outImgCols;
+	channels = out_channels;
+	//imgRows = layer[j][3];
+	//imgCols = layer[j][3];
+	pool_size = 2;
+
+	outImgRows = (int)(imgRows/pool_size);
+	outImgCols = (int)(imgCols/pool_size);
+	for (int i =0;i<channels*outImgCols*outImgCols;i++)
+		output_buffer[i] = 0;
+	try
+	{
+		cl::Buffer inputBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, channels*imgRows*imgCols*sizeof(float));
+		cl::Buffer outputBuffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, channels*outImgRows*outImgCols*sizeof(float));
+		cl::Buffer channelsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+		cl::Buffer poolSizeBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+		cl::Buffer inDimBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+		cl::Buffer outDimBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+
+		queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, channels*imgRows*imgCols*sizeof(float), input_buffer);
+		queue.enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, channels*outImgRows*outImgCols*sizeof(float), output_buffer);
+		queue.enqueueWriteBuffer(channelsBuffer, CL_TRUE, 0, sizeof(int), &channels);
+		queue.enqueueWriteBuffer(poolSizeBuffer, CL_TRUE, 0, sizeof(int), &pool_size);
+		queue.enqueueWriteBuffer(inDimBuffer, CL_TRUE, 0, sizeof(int), &imgRows);
+		queue.enqueueWriteBuffer(outDimBuffer, CL_TRUE, 0, sizeof(int), &outImgRows);
+
+		std::ifstream sourceFile("cl_kernels/max_pool2d.cl");
+		std::string sourceCode(
+		std::istreambuf_iterator<char>(sourceFile),
+		(std::istreambuf_iterator<char>()));
+		cl::Program::Sources source(1,
+		std::make_pair(sourceCode.c_str(),
+		sourceCode.length() + 1));
+
+		cl::Program program = cl::Program(context, source);
+
+		program.build(devices);
+
+		cl::Kernel kernel(program, "max_pool2d");
+
+		kernel.setArg(0, channelsBuffer);
+		kernel.setArg(1, inDimBuffer);
+		kernel.setArg(2, poolSizeBuffer);
+		kernel.setArg(3, outDimBuffer);
+		kernel.setArg(4, inputBuffer);
+		kernel.setArg(5, outputBuffer);
+
+		cl::NDRange global(outImgRows, outImgCols);
+		cl::NDRange local(1, 1);
+		cl::Event event;
+		queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local,NULL,&event);
+		queue.finish();
+
+		queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, channels*outImgRows*outImgCols*sizeof(float), output_buffer);
+		cl_ulong time_start;
+		cl_ulong time_end;
+
+		event.wait();
+		double total_time;
+		event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end); 
+		event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
+		total_time = time_end - time_start;
+
+		/* Results */
+		std::cout << "Execution time in milliseconds for maxpool layer " << total_time*1.0e-6f << std::endl;   
+
+	}
+	catch(cl::Error error)
+	{
+		std::cout << error.what() << "(" << error.err() << ")" <<std::endl;
+	}
+
+
 return 0;
 }
 

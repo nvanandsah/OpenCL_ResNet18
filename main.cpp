@@ -17,7 +17,7 @@ float* readImgtxt(const char *filename, int* rows, int* cols){}
 	int size = 32;
 	img = new float [size*size*channels];
 
-	FILE *fp = fopen(filename, "r");
+	FILE *fp = fopen(*filename, "r");
 	
 	if (fp == NULL){
 		std::cout<<"test image open failed!";

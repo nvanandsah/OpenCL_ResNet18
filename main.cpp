@@ -15,7 +15,7 @@ using namespace std;
 static const char* inputImagePath = "../../Images/cat.bmp";
 class Conv2D
 {
-	private:
+	public:
 		int numChannels;
 		int kernelWidth;
 		int kernelHeight;
@@ -23,8 +23,9 @@ class Conv2D
 		string *layerName;
 		string *weightFilePath;
 		FILE *filePtr;
+		double ****weights;
+		double *biases;
 
-	public:
 		Conv2D(string weightFilePath)
 		{
 			this->weightFilePath = new string(weightFilePath);
@@ -58,8 +59,7 @@ class Conv2D
 			cout<<"Channels : "<<this->numChannels<<endl;
 		}
 
-		double ****weights;
-		double *biases;
+
 
 	protected:
 		void allocateSpace()
@@ -205,8 +205,102 @@ int main()
         filterWidth*filterWidth*sizeof(float));
 
 
+	string weightFilePath("conv2d_1.txt");
+	Conv2D layer1(weightFilePath);
+	layer1.layerSummary();
+
+	
+	for(int i=0; i<layer1.kernelWidth; i++){
+		for(int j=0; j<layer1.kernelHeight; j++){
+			for(int k=0; k<layer1.kernelDepth; k++)
+				cout<<layer1.weights[0][i][j][k]<<" ";
+		}
+	}
     /// Layer 1
-    
+		int in_channels, out_channels, kernel_size, imgRows, imgCols;
+		in_channels = layer1.kernelDepth;
+		out_channels = layer1.numChannels;
+		kernel_size = 3;
+		imgRows = imageRows;
+		imgCols = imageCols;	
+		cl::Buffer inputBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, in_channels*imgRows*imgCols*sizeof(float));
+		cl::Buffer filterBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, in_channels*out_channels*kernel_size*kernel_size*sizeof(float));
+		cl::Buffer biasBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, out_channels*sizeof(float));
+		cl::Buffer outputBuffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, out_channels*imgRows*imgCols*sizeof(float));
+		cl::Buffer in_channelsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+		cl::Buffer out_channelsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+		cl::Buffer kernelSizeBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+		cl::Buffer imgRowsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+		cl::Buffer imgColsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+
+		queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, in_channels*imgRows*imgCols*sizeof(float), input_buffer);
+		queue.enqueueWriteBuffer(filterBuffer, CL_TRUE, 0, in_channels*out_channels*kernel_size*kernel_size*sizeof(float), w[weight_count]);
+		queue.enqueueWriteBuffer(biasBuffer, CL_TRUE, 0, out_channels*sizeof(float), w[weight_count+1]);
+		queue.enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), output_buffer);
+		queue.enqueueWriteBuffer(in_channelsBuffer, CL_TRUE, 0, sizeof(int), &in_channels);
+		queue.enqueueWriteBuffer(out_channelsBuffer, CL_TRUE, 0, sizeof(int), &out_channels);
+		queue.enqueueWriteBuffer(kernelSizeBuffer, CL_TRUE, 0, sizeof(int), &kernel_size);
+		queue.enqueueWriteBuffer(imgRowsBuffer, CL_TRUE, 0, sizeof(int), &imgRows);
+		queue.enqueueWriteBuffer(imgColsBuffer, CL_TRUE, 0, sizeof(int), &imgCols);
+
+		std::ifstream sourceFile("cl_kernels/conv.cl");
+        std::string sourceCode(
+         std::istreambuf_iterator<char>(sourceFile),
+         (std::istreambuf_iterator<char>()));
+         cl::Program::Sources source(1,
+         std::make_pair(sourceCode.c_str(),
+         sourceCode.length() + 1));
+
+     	cl::Program program = cl::Program(context, source);
+
+     	program.build(devices);
+     	
+     	cl::Kernel kernel(program, "convolution");
+
+     	kernel.setArg(0, out_channelsBuffer);
+     	kernel.setArg(1, in_channelsBuffer);
+     	kernel.setArg(2, kernelSizeBuffer);
+     	kernel.setArg(3, inputBuffer);
+     	kernel.setArg(4, filterBuffer);
+     	kernel.setArg(5, biasBuffer);
+     	kernel.setArg(6, outputBuffer);
+     	kernel.setArg(7, imgRowsBuffer);
+     	kernel.setArg(8, imgColsBuffer);
+
+     	cl::NDRange global(imgCols, imgRows);
+     	cl::NDRange local(2, 2);
+      cl::Event event;
+     	queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local,NULL,&event);
+      queue.finish();
+     	// Read data back
+     	queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), output_buffer);
+     cl_ulong time_start;
+     cl_ulong time_end;
+     
+     event.wait();
+    double total_time;
+    event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end); 
+    event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
+    total_time = time_end - time_start;
+
+/* Results */
+std::cout << "Execution time in milliseconds for convolution layer " << total_time*1.0e-6f << std::endl;   
+	}
+	catch(cl::Error error)
+	{
+		std::cout << error.what() << "(" << error.err() << ")" <<std::endl;
+	}
+    weight_count = weight_count+2;
+    for (int p = 0;p<(out_channels*imgRows*imgCols);p++)
+          { 
+               
+              input_buffer[p] = output_buffer[p]; 
+      }
+    }
+   
+    else if (layer[j][0]==1)
+      {
+  
 
     
     

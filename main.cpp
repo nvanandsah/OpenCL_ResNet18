@@ -258,7 +258,8 @@ int main()
      	cl::NDRange global(imgCols, imgRows);
      	cl::NDRange local(2, 2);
 		cl::Event event;
-			queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local,NULL,&event);
+			
+		queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local,NULL,&event);
 		queue.finish();
      	// Read data back
      	queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), hOutputImage);
@@ -274,9 +275,12 @@ int main()
 		/* Results */
 		std::cout << "Execution time in milliseconds for convolution layer " << total_time*1.0e-6f << std::endl;   
 	}
-	catch(cl::Error error)
+	/*catch(cl::Error error)
 	{
 		std::cout << error.what() << "(" << error.err() << ")" <<std::endl;
+	}*/
+	catch(...){
+		cout<<"Error";
 	}
 
     /*for (int p = 0;p<(out_channels*imgRows*imgCols);p++)

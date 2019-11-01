@@ -11,7 +11,7 @@ CC = g++
 CPPFLAGS = -Wall -O3
 
 # header file directories
-INCLUDES = -I/usr/include -I${OCL_INC} -I../../Utils
+INCLUDES = -I/usr/include -I${OCL_INC} -I Utils
 
 # library paths
 LFLAGS = -L${OCL_LIB}
@@ -20,13 +20,13 @@ LFLAGS = -L${OCL_LIB}
 LIBS = -lOpenCL
 
 # source files
-SRCS = image-convolution.c ../../Utils/utils.c ../../Utils/bmp-utils.c ../../Utils/gold.c
+SRCS = main.cpp Utils/utils.cpp 
 
 # object files 
 OBJS = $(SRCS:.c=.o)
 
 # executable file 
-MAIN = image-convolution 
+MAIN = main 
 
 .PHONY: clean
 

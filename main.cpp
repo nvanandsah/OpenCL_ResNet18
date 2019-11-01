@@ -11,13 +11,13 @@ using namespace std;
 #include "bmp-utils.h"
 #include "gold.h"
 
-float* readImgtxt(const char *filename, int* rows, int* cols){}
+float* readImgtxt(char *filename){
 	float *img;
 	int channels = 3;
 	int size = 32;
 	img = new float [size*size*channels];
 
-	FILE *fp = fopen(*filename, "r");
+	FILE *fp = fopen(filename, "r");
 	
 	if (fp == NULL){
 		std::cout<<"test image open failed!";
@@ -172,12 +172,12 @@ int main()
    float *hInputImage;
    float *hOutputImage;
 
-   int imageRows;
-   int imageCols;
+   int imageRows = 32;
+   int imageCols = 32;
 
-	char* inputImagePath = "lion.txt";
+	char* inputImagePath = "snail.txt";
 
-   static float gaussianBlurFilterFactor = 273.0f;
+   '''static float gaussianBlurFilterFactor = 273.0f;
    static float gaussianBlurFilter[25] = {
     1.0f,  4.0f,  7.0f,  4.0f, 1.0f,
     4.0f, 16.0f, 26.0f, 16.0f, 4.0f,
@@ -189,16 +189,15 @@ int main()
    int filterWidth = gaussianBlurFilterWidth;
    float filterFactor = gaussianBlurFilterFactor;
    float *filter = gaussianBlurFilter;   
-   for (int i = 0; i < filterWidth*filterWidth; i++) 
-   {
+   for (int i = 0; i < filterWidth*filterWidth; i++) {
       filter[i] = filter[i]/filterFactor;
-   }
+   }'''
 
    /* Read in the BMP image */
-   hInputImage = readImgtxt(inputImagePath, &imageRows, &imageCols);
+   hInputImage = readImgtxt(inputImagePath);
 
    /* Allocate space for the output image */
-   hOutputImage = new float [imageRows*imageCols];
+   hOutputImage = new float [imageRows*imageCols*];
 
     /* Query for platforms */
     std::vector<cl::Platform> platforms;
@@ -215,15 +214,12 @@ int main()
     cl::CommandQueue queue = cl::CommandQueue(context, devices[0]);
 
     /* Create the images */
-    cl::ImageFormat imageFormat = cl::ImageFormat(CL_R, CL_FLOAT);
-    cl::Image2D inputImage = cl::Image2D(context, CL_MEM_READ_ONLY,
-        imageFormat, imageCols, imageRows);
-    cl::Image2D outputImage = cl::Image2D(context, CL_MEM_WRITE_ONLY,
-        imageFormat, imageCols, imageRows);
+    cl::ImageFormat imageFormat = cl::ImageFormat(CL_RGB, CL_FLOAT);
+    cl::Image2D inputImage = cl::Image2D(context, CL_MEM_READ_ONLY, imageFormat, imageCols, imageRows);
+    cl::Image2D outputImage = cl::Image2D(context, CL_MEM_WRITE_ONLY, imageFormat, imageCols, imageRows);
 
     /* Create a buffer for the filter */
-    cl::Buffer filterBuffer = cl::Buffer(context, CL_MEM_READ_ONLY,
-        filterWidth*filterWidth*sizeof(float));
+    cl::Buffer filterBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, filterWidth*filterWidth*sizeof(float));
 
 
 	string weightFilePath("conv2d_1.txt");
@@ -239,7 +235,7 @@ int main()
 	}
     /// Layer 1
 		int in_channels, out_channels, kernel_size, imgRows, imgCols;
-		in_channels = 1;
+		in_channels = ;
 		out_channels = 1;
 		kernel_size = 3;
 		imgRows = imageRows;
@@ -314,13 +310,10 @@ std::cout << "Execution time in milliseconds for convolution layer " << total_ti
     weight_count = weight_count+2;
     for (int p = 0;p<(out_channels*imgRows*imgCols);p++)
           { 
-               
               input_buffer[p] = output_buffer[p]; 
       }
     }
-   
-    else if (layer[j][0]==1)
-      {
+
   
 
     

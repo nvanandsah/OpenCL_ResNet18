@@ -1,6 +1,8 @@
 /* System includes */
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
+
 
 /* OpenCL includes */
 #include <CL/cl.h>
@@ -87,4 +89,32 @@ char* readFile(const char *filename) {
    }
 
    return fileData;
+}
+
+
+float *read_image(int size, const char* img_file)
+{
+	float *img;
+	int channels = 3;
+
+	img = new float [size*size*channels];
+
+	FILE *fp = fopen(img_file, "r");
+	
+	if (fp == NULL)
+	{
+		std::cout<<"test image open failed!";
+		exit(-1);
+	}
+
+	for(int channels=0; channels<3; channels++)
+	{
+		for(int i=0; i<size; i++)
+		{
+			for(int j=0; j<size; j++)
+				fscanf(fp, "%f\n", img + i*size + j + channels*(size*size));
+		}
+	}
+
+	return img;
 }

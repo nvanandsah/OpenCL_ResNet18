@@ -218,8 +218,8 @@ int main()
 	}
     /// Layer 1
 		int in_channels, out_channels, kernel_size, imgRows, imgCols;
-		in_channels = layer1.kernelDepth;
-		out_channels = layer1.numChannels;
+		in_channels = 1;
+		out_channels = 1;
 		kernel_size = 3;
 		imgRows = imageRows;
 		imgCols = imageCols;	
@@ -234,8 +234,8 @@ int main()
 		cl::Buffer imgColsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
 
 		queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, in_channels*imgRows*imgCols*sizeof(float), hInputImage);
-		queue.enqueueWriteBuffer(filterBuffer, CL_TRUE, 0, in_channels*out_channels*kernel_size*kernel_size*sizeof(float), w[weight_count]);
-		queue.enqueueWriteBuffer(biasBuffer, CL_TRUE, 0, out_channels*sizeof(float), w[weight_count+1]);
+		queue.enqueueWriteBuffer(filterBuffer, CL_TRUE, 0, in_channels*out_channels*kernel_size*kernel_size*sizeof(float), filter);
+		queue.enqueueWriteBuffer(biasBuffer, CL_TRUE, 0, out_channels*sizeof(float), );
 		queue.enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), output_buffer);
 		queue.enqueueWriteBuffer(in_channelsBuffer, CL_TRUE, 0, sizeof(int), &in_channels);
 		queue.enqueueWriteBuffer(out_channelsBuffer, CL_TRUE, 0, sizeof(int), &out_channels);

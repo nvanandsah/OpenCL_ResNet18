@@ -11,8 +11,28 @@ using namespace std;
 #include "bmp-utils.h"
 #include "gold.h"
 
+float* readImgtxt(const char *filename, int* rows, int* cols){}
+	float *img;
+	int channels = 3;
+	int size = 32;
+	img = new float [size*size*channels];
 
-static const char* inputImagePath = "../../Images/cat.bmp";
+	FILE *fp = fopen(filename, "r");
+	
+	if (fp == NULL){
+		std::cout<<"test image open failed!";
+		exit(-1);
+	}
+
+	for(int channels=0; channels<3; channels++){
+		for(int i=0; i<size; i++){
+			for(int j=0; j<size; j++)
+				fscanf(fp, "%f\n", img + i*size + j + channels*(size*size));
+		}
+	}
+	return img;
+}
+
 class Conv2D
 {
 	public:
@@ -155,6 +175,7 @@ int main()
    int imageRows;
    int imageCols;
 
+	char* inputImagePath = "lion.txt";
 
    static float gaussianBlurFilterFactor = 273.0f;
    static float gaussianBlurFilter[25] = {
@@ -174,7 +195,7 @@ int main()
    }
 
    /* Read in the BMP image */
-   hInputImage = readBmpFloat(inputImagePath, &imageRows, &imageCols);
+   hInputImage = readImgtxt(inputImagePath, &imageRows, &imageCols);
 
    /* Allocate space for the output image */
    hOutputImage = new float [imageRows*imageCols];

@@ -187,7 +187,7 @@ int main()
 	int imageRows = 32;
 	int imageCols = 32;
 
-	hOutputImage = new float [imageRows*imageCols*];
+	
 
 	char* inputImagePath = "snail.txt";
 	hInputImage = readImgtxt(inputImagePath);
@@ -210,10 +210,10 @@ int main()
 		kernel_size = 3;
 		imgRows = imageRows;
 		imgCols = imageCols;	
-		
-		cl::ImageFormat imageFormat = cl::ImageFormat(CL_RGB, CL_FLOAT);
-		cl::Image2D inputImage = cl::Image2D(context, CL_MEM_READ_ONLY, imageFormat, imageCols, imageRows);
-		
+		hOutputImage = new float [imageRows*imageCols*out_channels];
+		//cl::ImageFormat imageFormat = cl::ImageFormat(CL_RGB, CL_FLOAT);
+		//cl::Image2D inputImage = cl::Image2D(context, CL_MEM_READ_ONLY, imageFormat, imageCols, imageRows);
+	try{	
 		cl::Buffer inputBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, in_channels*imgRows*imgCols*sizeof(float));
 		cl::Buffer filterBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, in_channels*out_channels*kernel_size*kernel_size*sizeof(float));
 		cl::Buffer biasBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, out_channels*sizeof(float));
@@ -225,9 +225,9 @@ int main()
 		cl::Buffer imgColsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
 
 		queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, in_channels*imgRows*imgCols*sizeof(float), hInputImage);
-		queue.enqueueWriteBuffer(filterBuffer, CL_TRUE, 0, in_channels*out_channels*kernel_size*kernel_size*sizeof(float), filter);
-		queue.enqueueWriteBuffer(biasBuffer, CL_TRUE, 0, out_channels*sizeof(float), );
-		queue.enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), output_buffer);
+		queue.enqueueWriteBuffer(filterBuffer, CL_TRUE, 0, in_channels*out_channels*kernel_size*kernel_size*sizeof(float), layer1.weights);
+		queue.enqueueWriteBuffer(biasBuffer, CL_TRUE, 0, out_channels*sizeof(float), layer1.biases);
+		queue.enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), hOutputImage);
 		queue.enqueueWriteBuffer(in_channelsBuffer, CL_TRUE, 0, sizeof(int), &in_channels);
 		queue.enqueueWriteBuffer(out_channelsBuffer, CL_TRUE, 0, sizeof(int), &out_channels);
 		queue.enqueueWriteBuffer(kernelSizeBuffer, CL_TRUE, 0, sizeof(int), &kernel_size);
@@ -236,11 +236,8 @@ int main()
 
 		std::ifstream sourceFile("Kernels/conv.cl");
         std::string sourceCode(
-         std::istreambuf_iterator<char>(sourceFile),
-         (std::istreambuf_iterator<char>()));
-         cl::Program::Sources source(1,
-         std::make_pair(sourceCode.c_str(),
-         sourceCode.length() + 1));
+		std::istreambuf_iterator<char>(sourceFile),(std::istreambuf_iterator<char>()));
+		cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(),sourceCode.length() + 1));
 
      	cl::Program program = cl::Program(context, source);
 
@@ -260,33 +257,35 @@ int main()
 
      	cl::NDRange global(imgCols, imgRows);
      	cl::NDRange local(2, 2);
-      cl::Event event;
-     	queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local,NULL,&event);
-      queue.finish();
+		cl::Event event;
+			queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local,NULL,&event);
+		queue.finish();
      	// Read data back
      	queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), hOutputImage);
-     cl_ulong time_start;
-     cl_ulong time_end;
-     
-     event.wait();
-    double total_time;
-    event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end); 
-    event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
-    total_time = time_end - time_start;
+		cl_ulong time_start;
+		cl_ulong time_end;
+		
+		event.wait();
+		double total_time;
+		event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end); 
+		event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
+		total_time = time_end - time_start;
 
-/* Results */
-std::cout << "Execution time in milliseconds for convolution layer " << total_time*1.0e-6f << std::endl;   
+		/* Results */
+		std::cout << "Execution time in milliseconds for convolution layer " << total_time*1.0e-6f << std::endl;   
 	}
 	catch(cl::Error error)
 	{
 		std::cout << error.what() << "(" << error.err() << ")" <<std::endl;
 	}
-    weight_count = weight_count+2;
-    for (int p = 0;p<(out_channels*imgRows*imgCols);p++)
+
+    /*for (int p = 0;p<(out_channels*imgRows*imgCols);p++)
           { 
               input_buffer[p] = output_buffer[p]; 
       }
-    }
+    }*/
+return 0;
+}
 
   
 

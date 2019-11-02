@@ -43,6 +43,7 @@ class Conv2D
 		string *weightFilePath;
 		FILE *filePtr;
 		double ****weights;
+		double *weights2;
 		double *biases;
 
 		Conv2D(string weightFilePath)
@@ -97,6 +98,7 @@ class Conv2D
 				}
 			}
 			/* Allocate space for biases */
+			this->weights2 = new double[(this->numChannels)*(this->kernelWidth)*(this->kernelHeight)*(this->kernelDepth)];
 			this->biases = new double[this->numChannels];
 		}
 
@@ -117,6 +119,7 @@ class Conv2D
 			}
 			delete[] this->weights;
 			/* Deallocates space of biases */
+			delete[] this->weights2;
 			delete[] this->biases;
 		}
 
@@ -143,14 +146,20 @@ class Conv2D
 
 		void parseWeights()
 		{
-			for(int channel=0; channel<(this->numChannels); channel++)
+			int nc = (this->numChannels);
+			int ww = (this->kernelWidth);
+			int hh = (this->kernelHeight);
+			int dd = (this->kernelDepth);
+			for(int channel=0; channel<nc; channel++)
 			{
-				for(int width=0; width<(this->kernelWidth); width++)
+				for(int width=0; width<ww; width++)
 				{
-					for(int height=0; height<(this->kernelHeight); height++)
+					for(int height=0; height<hh; height++)
 					{
-						for(int depth=0; depth<(this->kernelDepth); depth++)
+						for(int depth=0; depth<dd; depth++){
 							fscanf(this->filePtr, "%lf ", &weights[channel][width][height][depth]);
+							weights2[channel*(ww*hh*dd) + width*(hh*dd) + height*(hh) + depth] = weights[channel][width][height][depth];
+						}
 					}
 				}
 			}
@@ -167,34 +176,37 @@ int main()
 {
    	std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
-
     std::vector<cl::Device> devices;
     platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
-
     cl::Context context(devices);
-
     cl::CommandQueue queue = cl::CommandQueue(context, devices[0]);
-
+	
+	float *output_buffer = new float [5000000];
+	float *input_buffer = new float [5000000];
+    for (int i =0;i<5000000;i++){
+    	output_buffer[i] = 0;
+    }
 	float *hInputImage;
 	float *hOutputImage;
-
 	int imageRows = 32;
 	int imageCols = 32;
 
 	char* inputImagePath = "snail.txt";
 	/*
-	0 -- Conv
-	1 -- MaxPool
-	2 -- BN
-	3 -- Activation
+			0 -- Conv
+			1 -- MaxPool
+			2 -- Dense
+			3 -- Activation
 	*/
 	int arr[] = {0,1,3};
 	hInputImage = readImgtxt(inputImagePath);
+	
 	int LayerNum = 1;
 	for(int i=0;i<LayerNum; i++){
 		if(arr[i]==0){
-			///// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-   Convolution Layer -=--=-=-=-=-=-=-=-=-=-=-=-=--=--=-==-=-
-			string weightFilePath("conv2d_1.txt");
+			///// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-   Convolution Layer -=--=-=-=-=-=-=-=-=-=-=-=-=--=--=-==-=- /////
+			string fn = "Conv2D"+ std::to_string(i) + ".txt"; 
+			string weightFilePath(fn);
 			Conv2D layer1(weightFilePath);
 			layer1.layerSummary();
 
@@ -224,7 +236,7 @@ int main()
 				cl::Buffer imgRowsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
 				cl::Buffer imgColsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
 
-				queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, in_channels*imgRows*imgCols*sizeof(float), hInputImage);
+				queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, in_channels*imgRows*imgCols*sizeof(float), input_buffer);
 				queue.enqueueWriteBuffer(filterBuffer, CL_TRUE, 0, in_channels*out_channels*kernel_size*kernel_size*sizeof(float), layer1.weights);
 				queue.enqueueWriteBuffer(biasBuffer, CL_TRUE, 0, out_channels*sizeof(float), layer1.biases);
 				queue.enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), hOutputImage);

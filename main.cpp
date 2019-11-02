@@ -9,7 +9,6 @@ using namespace std;
 
 #include "utils.h"
 #include "bmp-utils.h"
-#include "gold.h"
 
 float* readImgtxt(char *filename){
 	float *img;
@@ -194,7 +193,7 @@ int main()
 	int LayerNum = 1;
 	for(int i=0;i<LayerNum; i++){
 		if(arr[i]==0){
-			/// ------------------------------------ Layer 1
+			///// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-   Convolution Layer -=--=-=-=-=-=-=-=-=-=-=-=-=--=--=-==-=-
 			string weightFilePath("conv2d_1.txt");
 			Conv2D layer1(weightFilePath);
 			layer1.layerSummary();

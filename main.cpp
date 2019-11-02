@@ -375,6 +375,7 @@ int main()
 
 		}
 		else if(arr[i]==2){
+			
 			try
 			{
 				cl::Buffer inputBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, in_features*sizeof(float));

@@ -22,7 +22,7 @@ float* readImgtxt(char *filename){
 		std::cout<<"test image open failed!";
 		exit(-1);
 	}
-
+	std::cout << "1\n";
 	for(int channels=0; channels<3; channels++){
 		for(int i=0; i<size; i++){
 			for(int j=0; j<size; j++)
@@ -190,26 +190,27 @@ int main()
 	float *hOutputImage;
 	int imageRows = 32;
 	int imageCols = 32;
-
+	
 	char* inputImagePath = "snail.txt";
 	/*
 			0 -- Conv
 			1 -- MaxPool
 			2 -- Dense
-			3 -- Activation
 	*/
 	int arr[] = {0,1,3};
 	hInputImage = readImgtxt(inputImagePath);
-	
+	input_buffer = hInputImage;
 	int LayerNum = 1;
+	int channel = 3;
 	for(int i=0;i<LayerNum; i++){
 		if(arr[i]==0){
 			///// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-   Convolution Layer -=--=-=-=-=-=-=-=-=-=-=-=-=--=--=-==-=- /////
-			string fn = "Conv2D"+ std::to_string(i) + ".txt"; 
+			//string fn = "Conv2D"+ std::to_string(i) + ".txt"; 
+			string fn = "conv2d_1.txt";
 			string weightFilePath(fn);
 			Conv2D layer1(weightFilePath);
 			layer1.layerSummary();
-
+			std::cout << "1\n";
 			for(int i=0; i<layer1.kernelWidth; i++){
 				for(int j=0; j<layer1.kernelHeight; j++){
 					for(int k=0; k<layer1.kernelDepth; k++)
@@ -277,7 +278,7 @@ int main()
 				queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), hOutputImage);
 				cl_ulong time_start;
 				cl_ulong time_end;
-				
+				channel = out_channels;
 				event.wait();
 				double total_time;
 				event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end); 
@@ -305,13 +306,14 @@ int main()
 			/* ------------------------------------ MaxPool 2D Starts ------------------------------------ */
 
 			int channels, pool_size, outImgRows, outImgCols;
-			channels = out_channels;
+			channels = channel;
 			//imgRows = layer[j][3];
 			//imgCols = layer[j][3];
 			pool_size = 2;
-
-			outImgRows = (int)(imgRows/pool_size);
-			outImgCols = (int)(imgCols/pool_size);
+			int imgRows = imageRows;
+			int imgCols = imageCols;
+			outImgRows = (int)(imageRows/pool_size);
+			outImgCols = (int)(imageCols/pool_size);
 			for (int i =0;i<channels*outImgCols*outImgCols;i++)
 				output_buffer[i] = 0;
 			try
@@ -371,9 +373,11 @@ int main()
 				std::cout << "Execution time in milliseconds for maxpool layer " << total_time*1.0e-6f << std::endl;   
 
 			}
-			catch(cl::Error error)
+			catch(...)
+			//catch(cl::Error error)
 			{
-				std::cout << error.what() << "(" << error.err() << ")" <<std::endl;
+				std::cout << "Error"; 
+				//std::cout << error.what() << "(" << error.err() << ")" <<std::endl;
 			}
 		}
 			

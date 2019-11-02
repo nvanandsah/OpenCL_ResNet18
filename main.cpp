@@ -79,8 +79,6 @@ class Conv2D
 			cout<<"Channels : "<<this->numChannels<<endl;
 		}
 
-
-
 	protected:
 		void allocateSpace()
 		{	
@@ -99,7 +97,6 @@ class Conv2D
 					}
 				}
 			}
-
 			/* Allocate space for biases */
 			this->biases = new double[this->numChannels];
 		}
@@ -179,8 +176,6 @@ int main()
 
     cl::CommandQueue queue = cl::CommandQueue(context, devices[0]);
 
-    //cl::Image2D outputImage = cl::Image2D(context, CL_MEM_WRITE_ONLY, imageFormat, imageCols, imageRows);
-
 	float *hInputImage;
 	float *hOutputImage;
 
@@ -188,179 +183,190 @@ int main()
 	int imageCols = 32;
 
 	char* inputImagePath = "snail.txt";
+	/*
+	0 -- Conv
+	1 -- MaxPool
+	2 -- BN
+	3 -- Activation
+	*/
+	int arr[] = {0,1,3};
 	hInputImage = readImgtxt(inputImagePath);
-	
-    /// ------------------------------------ Layer 1
-	string weightFilePath("conv2d_1.txt");
-	Conv2D layer1(weightFilePath);
-	layer1.layerSummary();
+	int LayerNum = 1;
+	for(int i=0;i<LayerNum; i++){
+		if(arr[i]==0){
+			/// ------------------------------------ Layer 1
+			string weightFilePath("conv2d_1.txt");
+			Conv2D layer1(weightFilePath);
+			layer1.layerSummary();
 
-	for(int i=0; i<layer1.kernelWidth; i++){
-		for(int j=0; j<layer1.kernelHeight; j++){
-			for(int k=0; k<layer1.kernelDepth; k++)
-				cout<<layer1.weights[0][i][j][k]<<" ";
-		}
-	}
+			for(int i=0; i<layer1.kernelWidth; i++){
+				for(int j=0; j<layer1.kernelHeight; j++){
+					for(int k=0; k<layer1.kernelDepth; k++)
+						cout<<layer1.weights[0][i][j][k]<<" ";
+				}
+			}
 
-		int in_channels, out_channels, kernel_size, imgRows, imgCols;
-		in_channels = layer1.kernelDepth;
-		out_channels = layer1.numChannels;
-		kernel_size = 3;
-		imgRows = imageRows;
-		imgCols = imageCols;	
-		hOutputImage = new float [imageRows*imageCols*out_channels];
-		//cl::ImageFormat imageFormat = cl::ImageFormat(CL_RGB, CL_FLOAT);
-		//cl::Image2D inputImage = cl::Image2D(context, CL_MEM_READ_ONLY, imageFormat, imageCols, imageRows);
-	try{	
-		cl::Buffer inputBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, in_channels*imgRows*imgCols*sizeof(float));
-		cl::Buffer filterBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, in_channels*out_channels*kernel_size*kernel_size*sizeof(float));
-		cl::Buffer biasBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, out_channels*sizeof(float));
-		cl::Buffer outputBuffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, out_channels*imgRows*imgCols*sizeof(float));
-		cl::Buffer in_channelsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
-		cl::Buffer out_channelsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
-		cl::Buffer kernelSizeBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
-		cl::Buffer imgRowsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
-		cl::Buffer imgColsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
-
-		queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, in_channels*imgRows*imgCols*sizeof(float), hInputImage);
-		queue.enqueueWriteBuffer(filterBuffer, CL_TRUE, 0, in_channels*out_channels*kernel_size*kernel_size*sizeof(float), layer1.weights);
-		queue.enqueueWriteBuffer(biasBuffer, CL_TRUE, 0, out_channels*sizeof(float), layer1.biases);
-		queue.enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), hOutputImage);
-		queue.enqueueWriteBuffer(in_channelsBuffer, CL_TRUE, 0, sizeof(int), &in_channels);
-		queue.enqueueWriteBuffer(out_channelsBuffer, CL_TRUE, 0, sizeof(int), &out_channels);
-		queue.enqueueWriteBuffer(kernelSizeBuffer, CL_TRUE, 0, sizeof(int), &kernel_size);
-		queue.enqueueWriteBuffer(imgRowsBuffer, CL_TRUE, 0, sizeof(int), &imgRows);
-		queue.enqueueWriteBuffer(imgColsBuffer, CL_TRUE, 0, sizeof(int), &imgCols);
-
-		std::ifstream sourceFile("Kernels/conv.cl");
-        std::string sourceCode(
-		std::istreambuf_iterator<char>(sourceFile),(std::istreambuf_iterator<char>()));
-		cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(),sourceCode.length() + 1));
-
-     	cl::Program program = cl::Program(context, source);
-
-     	program.build(devices);
-     	
-     	cl::Kernel kernel(program, "convolution");
-
-     	kernel.setArg(0, out_channelsBuffer);
-     	kernel.setArg(1, in_channelsBuffer);
-     	kernel.setArg(2, kernelSizeBuffer);
-     	kernel.setArg(3, inputBuffer);
-     	kernel.setArg(4, filterBuffer);
-     	kernel.setArg(5, biasBuffer);
-     	kernel.setArg(6, outputBuffer);
-     	kernel.setArg(7, imgRowsBuffer);
-     	kernel.setArg(8, imgColsBuffer);
-
-     	cl::NDRange global(imgCols, imgRows);
-     	cl::NDRange local(2, 2);
-		cl::Event event;
+				int in_channels, out_channels, kernel_size, imgRows, imgCols;
+				in_channels = layer1.kernelDepth;
+				out_channels = layer1.numChannels;
+				kernel_size = 3;
+				imgRows = imageRows;
+				imgCols = imageCols;	
+				hOutputImage = new float [imageRows*imageCols*out_channels];
 			
-		queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local,NULL,&event);
-		queue.finish();
-     	// Read data back
-     	queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), hOutputImage);
-		cl_ulong time_start;
-		cl_ulong time_end;
-		
-		event.wait();
-		double total_time;
-		event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end); 
-		event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
-		total_time = time_end - time_start;
+			try{	
+				cl::Buffer inputBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, in_channels*imgRows*imgCols*sizeof(float));
+				cl::Buffer filterBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, in_channels*out_channels*kernel_size*kernel_size*sizeof(float));
+				cl::Buffer biasBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, out_channels*sizeof(float));
+				cl::Buffer outputBuffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, out_channels*imgRows*imgCols*sizeof(float));
+				cl::Buffer in_channelsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+				cl::Buffer out_channelsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+				cl::Buffer kernelSizeBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+				cl::Buffer imgRowsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+				cl::Buffer imgColsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
 
-		/* Results */
-		std::cout << "Execution time in milliseconds for convolution layer " << total_time*1.0e-6f << std::endl;   
+				queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, in_channels*imgRows*imgCols*sizeof(float), hInputImage);
+				queue.enqueueWriteBuffer(filterBuffer, CL_TRUE, 0, in_channels*out_channels*kernel_size*kernel_size*sizeof(float), layer1.weights);
+				queue.enqueueWriteBuffer(biasBuffer, CL_TRUE, 0, out_channels*sizeof(float), layer1.biases);
+				queue.enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), hOutputImage);
+				queue.enqueueWriteBuffer(in_channelsBuffer, CL_TRUE, 0, sizeof(int), &in_channels);
+				queue.enqueueWriteBuffer(out_channelsBuffer, CL_TRUE, 0, sizeof(int), &out_channels);
+				queue.enqueueWriteBuffer(kernelSizeBuffer, CL_TRUE, 0, sizeof(int), &kernel_size);
+				queue.enqueueWriteBuffer(imgRowsBuffer, CL_TRUE, 0, sizeof(int), &imgRows);
+				queue.enqueueWriteBuffer(imgColsBuffer, CL_TRUE, 0, sizeof(int), &imgCols);
+
+				std::ifstream sourceFile("Kernels/conv.cl");
+				std::string sourceCode(
+				std::istreambuf_iterator<char>(sourceFile),(std::istreambuf_iterator<char>()));
+				cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(),sourceCode.length() + 1));
+
+				cl::Program program = cl::Program(context, source);
+
+				program.build(devices);
+				
+				cl::Kernel kernel(program, "convolution");
+
+				kernel.setArg(0, out_channelsBuffer);
+				kernel.setArg(1, in_channelsBuffer);
+				kernel.setArg(2, kernelSizeBuffer);
+				kernel.setArg(3, inputBuffer);
+				kernel.setArg(4, filterBuffer);
+				kernel.setArg(5, biasBuffer);
+				kernel.setArg(6, outputBuffer);
+				kernel.setArg(7, imgRowsBuffer);
+				kernel.setArg(8, imgColsBuffer);
+
+				cl::NDRange global(imgCols, imgRows);
+				cl::NDRange local(2, 2);
+				cl::Event event;
+					
+				queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local,NULL,&event);
+				queue.finish();
+				// Read data back
+				queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, out_channels*imgRows*imgCols*sizeof(float), hOutputImage);
+				cl_ulong time_start;
+				cl_ulong time_end;
+				
+				event.wait();
+				double total_time;
+				event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end); 
+				event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
+				total_time = time_end - time_start;
+
+				/* Results */
+				std::cout << "Execution time in milliseconds for convolution layer " << total_time*1.0e-6f << std::endl;   
+			}
+			/*catch(cl::Error error)
+			{
+				std::cout << error.what() << "(" << error.err() << ")" <<std::endl;
+			}*/
+			catch(...){
+				cout<<"Error";
+			}
+			// --------------------------------------------------- Layer 1 End
+
+			for (int p = 0;p<(out_channels*imgRows*imgCols);p++){ 
+					input_buffer[p] = output_buffer[p]; 
+				}
+			
+		}
+		if(arr[i]==1){
+			/* ------------------------------------ MaxPool 2D Starts ------------------------------------ */
+
+			int channels, pool_size, outImgRows, outImgCols;
+			channels = out_channels;
+			//imgRows = layer[j][3];
+			//imgCols = layer[j][3];
+			pool_size = 2;
+
+			outImgRows = (int)(imgRows/pool_size);
+			outImgCols = (int)(imgCols/pool_size);
+			for (int i =0;i<channels*outImgCols*outImgCols;i++)
+				output_buffer[i] = 0;
+			try
+			{
+				cl::Buffer inputBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, channels*imgRows*imgCols*sizeof(float));
+				cl::Buffer outputBuffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, channels*outImgRows*outImgCols*sizeof(float));
+				cl::Buffer channelsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+				cl::Buffer poolSizeBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+				cl::Buffer inDimBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+				cl::Buffer outDimBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
+
+				queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, channels*imgRows*imgCols*sizeof(float), input_buffer);
+				queue.enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, channels*outImgRows*outImgCols*sizeof(float), output_buffer);
+				queue.enqueueWriteBuffer(channelsBuffer, CL_TRUE, 0, sizeof(int), &channels);
+				queue.enqueueWriteBuffer(poolSizeBuffer, CL_TRUE, 0, sizeof(int), &pool_size);
+				queue.enqueueWriteBuffer(inDimBuffer, CL_TRUE, 0, sizeof(int), &imgRows);
+				queue.enqueueWriteBuffer(outDimBuffer, CL_TRUE, 0, sizeof(int), &outImgRows);
+
+				std::ifstream sourceFile("cl_kernels/max_pool2d.cl");
+				std::string sourceCode(
+				std::istreambuf_iterator<char>(sourceFile),
+				(std::istreambuf_iterator<char>()));
+				cl::Program::Sources source(1,
+				std::make_pair(sourceCode.c_str(),
+				sourceCode.length() + 1));
+
+				cl::Program program = cl::Program(context, source);
+
+				program.build(devices);
+
+				cl::Kernel kernel(program, "max_pool2d");
+
+				kernel.setArg(0, channelsBuffer);
+				kernel.setArg(1, inDimBuffer);
+				kernel.setArg(2, poolSizeBuffer);
+				kernel.setArg(3, outDimBuffer);
+				kernel.setArg(4, inputBuffer);
+				kernel.setArg(5, outputBuffer);
+
+				cl::NDRange global(outImgRows, outImgCols);
+				cl::NDRange local(1, 1);
+				cl::Event event;
+				queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local,NULL,&event);
+				queue.finish();
+
+				queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, channels*outImgRows*outImgCols*sizeof(float), output_buffer);
+				cl_ulong time_start;
+				cl_ulong time_end;
+
+				event.wait();
+				double total_time;
+				event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end); 
+				event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
+				total_time = time_end - time_start;
+
+				/* Results */
+				std::cout << "Execution time in milliseconds for maxpool layer " << total_time*1.0e-6f << std::endl;   
+
+			}
+			catch(cl::Error error)
+			{
+				std::cout << error.what() << "(" << error.err() << ")" <<std::endl;
+			}
+		}
+			
 	}
-	/*catch(cl::Error error)
-	{
-		std::cout << error.what() << "(" << error.err() << ")" <<std::endl;
-	}*/
-	catch(...){
-		cout<<"Error";
-	}
-	// --------------------------------------------------- Layer 1 End
-
-    /*for (int p = 0;p<(out_channels*imgRows*imgCols);p++){ 
-            input_buffer[p] = output_buffer[p]; 
-    	}
-    
-	
-	/* ------------------------------------ MaxPool 2D Starts ------------------------------------ */
-
-	int channels, pool_size, outImgRows, outImgCols;
-	channels = out_channels;
-	//imgRows = layer[j][3];
-	//imgCols = layer[j][3];
-	pool_size = 2;
-
-	outImgRows = (int)(imgRows/pool_size);
-	outImgCols = (int)(imgCols/pool_size);
-	for (int i =0;i<channels*outImgCols*outImgCols;i++)
-		output_buffer[i] = 0;
-	try
-	{
-		cl::Buffer inputBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, channels*imgRows*imgCols*sizeof(float));
-		cl::Buffer outputBuffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, channels*outImgRows*outImgCols*sizeof(float));
-		cl::Buffer channelsBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
-		cl::Buffer poolSizeBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
-		cl::Buffer inDimBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
-		cl::Buffer outDimBuffer = cl::Buffer(context, CL_MEM_READ_ONLY, sizeof(int));
-
-		queue.enqueueWriteBuffer(inputBuffer, CL_TRUE, 0, channels*imgRows*imgCols*sizeof(float), input_buffer);
-		queue.enqueueWriteBuffer(outputBuffer, CL_TRUE, 0, channels*outImgRows*outImgCols*sizeof(float), output_buffer);
-		queue.enqueueWriteBuffer(channelsBuffer, CL_TRUE, 0, sizeof(int), &channels);
-		queue.enqueueWriteBuffer(poolSizeBuffer, CL_TRUE, 0, sizeof(int), &pool_size);
-		queue.enqueueWriteBuffer(inDimBuffer, CL_TRUE, 0, sizeof(int), &imgRows);
-		queue.enqueueWriteBuffer(outDimBuffer, CL_TRUE, 0, sizeof(int), &outImgRows);
-
-		std::ifstream sourceFile("cl_kernels/max_pool2d.cl");
-		std::string sourceCode(
-		std::istreambuf_iterator<char>(sourceFile),
-		(std::istreambuf_iterator<char>()));
-		cl::Program::Sources source(1,
-		std::make_pair(sourceCode.c_str(),
-		sourceCode.length() + 1));
-
-		cl::Program program = cl::Program(context, source);
-
-		program.build(devices);
-
-		cl::Kernel kernel(program, "max_pool2d");
-
-		kernel.setArg(0, channelsBuffer);
-		kernel.setArg(1, inDimBuffer);
-		kernel.setArg(2, poolSizeBuffer);
-		kernel.setArg(3, outDimBuffer);
-		kernel.setArg(4, inputBuffer);
-		kernel.setArg(5, outputBuffer);
-
-		cl::NDRange global(outImgRows, outImgCols);
-		cl::NDRange local(1, 1);
-		cl::Event event;
-		queue.enqueueNDRangeKernel(kernel, cl::NullRange, global, local,NULL,&event);
-		queue.finish();
-
-		queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, channels*outImgRows*outImgCols*sizeof(float), output_buffer);
-		cl_ulong time_start;
-		cl_ulong time_end;
-
-		event.wait();
-		double total_time;
-		event.getProfilingInfo(CL_PROFILING_COMMAND_END, &time_end); 
-		event.getProfilingInfo(CL_PROFILING_COMMAND_START, &time_start);
-		total_time = time_end - time_start;
-
-		/* Results */
-		std::cout << "Execution time in milliseconds for maxpool layer " << total_time*1.0e-6f << std::endl;   
-
-	}
-	catch(cl::Error error)
-	{
-		std::cout << error.what() << "(" << error.err() << ")" <<std::endl;
-	}
-
 
 return 0;
 }
